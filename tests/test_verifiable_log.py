@@ -36,3 +36,24 @@ def test_expected_short_logs():
     vlog = VerifiableLog()
     vlog.append(TEST_INPUTS[0])
     assert hexlify(vlog.currentRoot()) == b"6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+
+    vlog.append(TEST_INPUTS[1])
+    assert hexlify(vlog.currentRoot()) == b"fac54203e7cc696cf0dfcb42c92a1d9dbaf70ad9e621f4bd8d98662f00e3c125"
+
+    vlog.append(TEST_INPUTS[2])
+    assert hexlify(vlog.currentRoot()) == b"aeb6bcfe274b70a14fb067a5e5578264db0fa9b51af5e0ba159158f329e06e77"
+
+    vlog.append(TEST_INPUTS[3])
+    assert hexlify(vlog.currentRoot()) == b"d37ee418976dd95753c1c73862b9398fa2a2cf9b4ff0fdfe8b30cd95209614b7"
+
+    vlog.append(TEST_INPUTS[4])
+    assert hexlify(vlog.currentRoot()) == b"4e3bbb1f7b478dcfe71fb631631519a3bca12c9aefca1612bfce4c13a86264d4"
+
+    vlog.append(TEST_INPUTS[5])
+    assert hexlify(vlog.currentRoot()) == b"76e67dadbcdf1e10e1b74ddc608abd2f98dfb16fbce75277b5232a127f2087ef"
+
+    vlog.append(TEST_INPUTS[6])
+    assert hexlify(vlog.currentRoot()) == b"ddb89be403809e325750d3d263cd78929c2942b7942a34b77e122c9594a74c8c"
+
+    vlog.append(TEST_INPUTS[7])
+    assert hexlify(vlog.currentRoot()) == b"5dc9da79a70659a9ad559cb701ded9a2ab9d823aad2f4960cfe370eff4604328"
