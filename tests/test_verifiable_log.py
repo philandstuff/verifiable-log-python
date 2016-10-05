@@ -9,9 +9,11 @@ Tests for `verifiable_log` module.
 """
 
 import pytest
+from hypothesis import given
+import hypothesis.strategies as st
 from binascii import hexlify
 
-from verifiable_log.verifiable_log import VerifiableLog
+from verifiable_log.verifiable_log import VerifiableLog, validAuditProof
 
 
 EMPTY_HASH=b'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
@@ -63,9 +65,9 @@ def test_expected_audit_proofs():
     for input in TEST_INPUTS:
         vlog.append(input)
 
-    assert len(vlog.auditProof(0,0)) == 0
+    assert vlog.auditProof(0,0) == []
 
-    assert len(vlog.auditProof(0,1)) == 0
+    assert vlog.auditProof(0,1) == []
 
     assert [hexlify(x) for x in vlog.auditProof(0,8)] == [
         b"96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7",
@@ -88,3 +90,27 @@ def test_expected_audit_proofs():
         b"5f083f0a1a33ca076a95279832580db3e0ef4584bdff1f54c8a360f50de3031e",
         b"bc1a0643b12e4d2d7c77918f44e0f4f79a838b6cf9ec5b5c283e1f4d88599e6b"
     ]
+
+
+def test_expected_consistency_proofs():
+    vlog = VerifiableLog()
+    for input in TEST_INPUTS:
+        vlog.append(input)
+
+    assert vlog.consistencyProof(1,1) == []
+
+    assert [hexlify(x) for x in vlog.consistencyProof(1,8)] == [
+        b"96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7",
+        b"5f083f0a1a33ca076a95279832580db3e0ef4584bdff1f54c8a360f50de3031e",
+        b"6b47aaf29ee3c2af9af889bc1fb9254dabd31177f16232dd6aab035ca39bf6e4"
+    ]
+
+
+@given(st.lists(st.binary(), max_size=99), st.integers(min_value=0, max_value=99))
+def test_audit_proofs_are_valid(data, leafIndex):
+    st.assume(leafIndex < len(data))
+    vlog = VerifiableLog()
+    for b in data:
+        vlog.append(b)
+
+    assert validAuditProof(vlog.currentRoot(), len(data), leafIndex, vlog.auditProof(leafIndex, len(data)), data[leafIndex])

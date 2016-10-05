@@ -14,6 +14,7 @@ requirements = [
 ]
 
 test_requirements = [
+    "hypothesis"
     # TODO: put package test requirements here
 ]
 
