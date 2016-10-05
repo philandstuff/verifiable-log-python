@@ -57,3 +57,34 @@ def test_expected_short_logs():
 
     vlog.append(TEST_INPUTS[7])
     assert hexlify(vlog.currentRoot()) == b"5dc9da79a70659a9ad559cb701ded9a2ab9d823aad2f4960cfe370eff4604328"
+
+def test_expected_audit_proofs():
+    vlog = VerifiableLog()
+    for input in TEST_INPUTS:
+        vlog.append(input)
+
+    assert len(vlog.auditProof(0,0)) == 0
+
+    assert len(vlog.auditProof(0,1)) == 0
+
+    assert [hexlify(x) for x in vlog.auditProof(0,8)] == [
+        b"96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7",
+        b"5f083f0a1a33ca076a95279832580db3e0ef4584bdff1f54c8a360f50de3031e",
+        b"6b47aaf29ee3c2af9af889bc1fb9254dabd31177f16232dd6aab035ca39bf6e4"
+    ]
+
+    assert [hexlify(x) for x in vlog.auditProof(5,8)] == [
+        b"bc1a0643b12e4d2d7c77918f44e0f4f79a838b6cf9ec5b5c283e1f4d88599e6b",
+        b"ca854ea128ed050b41b35ffc1b87b8eb2bde461e9e3b5596ece6b9d5975a0ae0",
+        b"d37ee418976dd95753c1c73862b9398fa2a2cf9b4ff0fdfe8b30cd95209614b7"        
+    ]
+
+    assert [hexlify(x) for x in vlog.auditProof(2,3)] == [
+        b"fac54203e7cc696cf0dfcb42c92a1d9dbaf70ad9e621f4bd8d98662f00e3c125"
+    ]
+
+    assert [hexlify(x) for x in vlog.auditProof(1,5)] == [
+        b"6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+        b"5f083f0a1a33ca076a95279832580db3e0ef4584bdff1f54c8a360f50de3031e",
+        b"bc1a0643b12e4d2d7c77918f44e0f4f79a838b6cf9ec5b5c283e1f4d88599e6b"
+    ]

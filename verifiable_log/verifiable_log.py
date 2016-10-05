@@ -21,8 +21,26 @@ class VerifiableLog(object):
         return self._subtreeHash(0,len(self._entries))
 
 
+    def auditProof(self, idx, size):
+        return self._subtreeAuditProof(idx, 0, size)
+
+
     def append(self, entry):
         self._entries.append(entry)
+
+
+    def _subtreeAuditProof(self, idx, start, size):
+        if size <= 1:
+            return []
+        k = split_point(size)
+        if idx < k:
+            subtreeProof = self._subtreeAuditProof(idx, start, k)
+            subtreeProof.append(self._subtreeHash(start+k, size-k))
+            return subtreeProof
+        else:
+            subtreeProof = self._subtreeAuditProof(idx - k, start + k, size - k)
+            subtreeProof.append(self._subtreeHash(start, k))
+            return subtreeProof
 
 
     def _subtreeHash(self, start, size):
