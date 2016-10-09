@@ -13,7 +13,7 @@ from hypothesis import given
 import hypothesis.strategies as st
 from binascii import hexlify
 
-from verifiable_log.verifiable_log import VerifiableLog, validAuditProof
+from verifiable_log.verifiable_log import VerifiableLog, VerifiableLog2, validAuditProof
 
 
 EMPTY_HASH=b'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
@@ -114,3 +114,29 @@ def test_audit_proofs_are_valid(data, leafIndex):
         vlog.append(b)
 
     assert validAuditProof(vlog.currentRoot(), len(data), leafIndex, vlog.auditProof(leafIndex, len(data)), data[leafIndex])
+
+
+@given(st.lists(st.binary(), max_size=99), st.integers(min_value=0, max_value=99), st.integers(min_value=0, max_value=99))
+def test_snapshotted_audit_proofs_are_valid(data, leafIndex, snapshotSize):
+    st.assume(leafIndex < snapshotSize)
+    st.assume(snapshotSize < len(data))
+    vlog = VerifiableLog()
+    for b in data[0:snapshotSize]:
+        vlog.append(b)
+
+    rootHash = vlog.currentRoot()
+    for b in data[snapshotSize:]:
+        vlog.append(b)
+
+    assert validAuditProof(rootHash, snapshotSize, leafIndex, vlog.auditProof(leafIndex, snapshotSize), data[leafIndex])
+
+
+@given(st.lists(st.binary(), max_size=99))
+def test_different_impls_agree_on_root_hash(data):
+    vlog1 = VerifiableLog()
+    vlog2 = VerifiableLog2()
+    for b in data:
+        vlog1.append(b)
+        vlog2.append(b)
+
+    assert vlog1.currentRoot() == vlog2.currentRoot()

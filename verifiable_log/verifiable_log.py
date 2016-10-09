@@ -18,6 +18,44 @@ def _branch_hash(l,r):
     return h.digest()
 
 
+class VerifiableLog2(object):
+    def __init__(self):
+        self._entries = []
+        self._hashes = []
+
+
+    def currentRoot(self):
+        if len(self._entries) == 0:
+            return sha256(b'').digest()
+
+        level = 0
+        # find level with first unbalanced hash
+        while len(self._hashes[level])%2 == 0:
+            level = level + 1
+        # save it as seed value
+        hash = self._hashes[level][-1]
+        # combine it with all unbalanced hashes up the tree
+        for hashes in self._hashes[level+1:]:
+            if len(hashes)%2 == 1:
+                hash = _branch_hash(hashes[-1],hash)
+        return hash
+
+
+    def append(self, entry):
+        self._entries.append(entry)
+        h = sha256(b'\x00')
+        h.update(entry)
+        self._add_hash_to_level(0, h.digest())
+
+
+    def _add_hash_to_level(self, level, hash):
+        if len(self._hashes) == level:
+            self._hashes.append([])
+        hashes = self._hashes[level]
+        hashes.append(hash)
+        if len(self._hashes[level]) % 2 == 0:
+            new_hash = _branch_hash(hashes[-2],hashes[-1])
+            self._add_hash_to_level(level+1, new_hash)
 class VerifiableLog(object):
     def __init__(self):
         self._entries = []
