@@ -56,6 +56,37 @@ class VerifiableLog2(object):
         if len(self._hashes[level]) % 2 == 0:
             new_hash = _branch_hash(hashes[-2],hashes[-1])
             self._add_hash_to_level(level+1, new_hash)
+
+
+    def auditProof(self, node, size):
+        proof = []
+        if size <= 1:
+            return proof
+        last_node = size-1
+        level = 0
+
+        last_hash = self._hashes[0][last_node]
+
+        while last_node > 0:
+            # find which node, if any, to add to the tree
+            is_left_child = node%2 == 0
+            sibling = node+1 if is_left_child else node-1
+            if sibling < last_node:
+                proof.append(self._hashes[level][sibling])
+            elif sibling == last_node:
+                proof.append(last_hash)
+            # else: sibling > last_node
+            #   ie sibling doesn't exist and shouldn't be added
+
+            # now, step up the tree to the next level
+            if last_node % 2 == 1:
+                last_hash = _branch_hash(self._hashes[level][last_node-1], last_hash)
+            level += 1
+            node //= 2
+            last_node //= 2
+        return proof
+
+
 class VerifiableLog(object):
     def __init__(self):
         self._entries = []
@@ -132,8 +163,12 @@ def _rootHashFromAuditProof(leafHash, proof, idx, treeSize):
     if len(proof) == 0:
         return leafHash
     if idx%2==0 and idx+1==treeSize: # this is an unpaired hash, pass it up to the next level
+        if treeSize==1:
+            # oops, there is no next level
+            raise ValueError
         return _rootHashFromAuditProof(leafHash, proof, idx//2, (treeSize+1)//2)
     sibling = proof.pop(0)
+    assert sibling
     if idx % 2 == 0: # leaf is on left of final subtree
         return _rootHashFromAuditProof(_branch_hash(leafHash, sibling), proof, idx//2, (treeSize+1)//2)
     else:

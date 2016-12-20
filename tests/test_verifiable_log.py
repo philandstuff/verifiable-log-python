@@ -140,3 +140,28 @@ def test_different_impls_agree_on_root_hash(data):
         vlog2.append(b)
 
     assert vlog1.currentRoot() == vlog2.currentRoot()
+
+
+@given(st.lists(st.binary(), max_size=99), st.integers(min_value=0, max_value=99))
+def test_audit_proofs_are_valid_with_alternative_impl(data, leafIndex):
+    st.assume(leafIndex < len(data))
+    vlog = VerifiableLog2()
+    for b in data:
+        vlog.append(b)
+
+    assert validAuditProof(vlog.currentRoot(), len(data), leafIndex, vlog.auditProof(leafIndex, len(data)), data[leafIndex])
+
+
+@given(st.lists(st.binary(), max_size=99), st.integers(min_value=0, max_value=99), st.integers(min_value=0, max_value=99))
+def test_snapshotted_audit_proofs_are_valid_with_alternative_impl(data, leafIndex, snapshotSize):
+    st.assume(leafIndex < snapshotSize)
+    st.assume(snapshotSize < len(data))
+    vlog = VerifiableLog2()
+    for b in data[0:snapshotSize]:
+        vlog.append(b)
+
+    rootHash = vlog.currentRoot()
+    for b in data[snapshotSize:]:
+        vlog.append(b)
+
+    assert validAuditProof(rootHash, snapshotSize, leafIndex, vlog.auditProof(leafIndex, snapshotSize), data[leafIndex])
