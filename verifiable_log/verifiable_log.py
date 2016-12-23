@@ -3,6 +3,16 @@
 from hashlib import sha256
 
 
+# from MerkleTreeMath
+def is_right_child(node):
+    return node%2 == 1
+
+
+# from MerkleTreeMath
+def parent(node):
+    return node // 2
+
+
 def split_point(n):
     split = 1;
     while split < n:
@@ -85,6 +95,53 @@ class VerifiableLog2(object):
             node //= 2
             last_node //= 2
         return proof
+
+
+    def _pathFromNodeToRootAtSnapshot(self, node, level, snapshot):
+        path = []
+        if snapshot == 0:
+            return path
+
+        last_node = snapshot-1
+        last_hash = self._hashes[0][last_node]
+
+        for row in self._hashes[:level]:
+            if is_right_child(last_node):
+                last_hash = _branch_hash(row[last_node-1], last_hash)
+            last_node = parent(last_node)
+
+        while last_node > 0:
+            # find which node, if any, to add to the tree
+            sibling = node-1 if is_right_child(node) else node+1
+            if sibling < last_node:
+                path.append(self._hashes[level][sibling])
+            elif sibling == last_node:
+                path.append(last_hash)
+            # else: sibling > last_node
+            #   ie sibling doesn't exist and shouldn't be added
+
+            # now, step up the tree to the next level
+            if is_right_child(last_node):
+                last_hash = _branch_hash(self._hashes[level][last_node-1], last_hash)
+            level += 1
+            node = parent(node)
+            last_node = parent(last_node)
+        return path
+
+
+    def consistencyProof(self, fstSize, sndSize):
+        proof = []
+        if fstSize == 0 or fstSize >= sndSize or sndSize > len(self._entries):
+            return proof
+        level = 0
+        node = fstSize - 1
+        while is_right_child(node):
+            node = parent(node)
+            level += 1
+
+        if node:
+            proof.append(self._hashes[level][node])
+        return proof + self._pathFromNodeToRootAtSnapshot(node, level, sndSize)
 
 
 class VerifiableLog(object):
@@ -175,6 +232,33 @@ def _rootHashFromAuditProof(leafHash, proof, idx, treeSize):
         return _rootHashFromAuditProof(_branch_hash(sibling, leafHash), proof, idx//2, (treeSize+1)//2)
 
 
+def _rootHashFromConsistencyProof(oldSize, newSize, proofNodes, oldRoot, computeNewRoot, startFromOldRoot):
+    if oldSize == newSize:
+        if startFromOldRoot:
+            # this is the b == true case in RFC 6962
+            return oldRoot
+        return proofNodes[-1]
+    k = split_point(newSize)
+    nextHash = proofNodes[-1]
+    if oldSize <= k:
+        leftChild = _rootHashFromConsistencyProof(oldSize, k, proofNodes[:-1], oldRoot, computeNewRoot, startFromOldRoot)
+        if computeNewRoot:
+            return _branch_hash(leftChild, nextHash)
+        else:
+            return leftChild
+    else:
+        rightChild = _rootHashFromConsistencyProof(oldSize - k, newSize - k, proofNodes[:-1], oldRoot, computeNewRoot, False)
+        return _branch_hash(nextHash, rightChild)
+
+
+def _oldRootFromConsistencyProof(oldSize, newSize, proofNodes, oldRoot):
+    return _rootHashFromConsistencyProof(oldSize, newSize, proofNodes, oldRoot, False, True)
+
+
+def _newRootFromConsistencyProof(oldSize, newSize, proofNodes, oldRoot):
+    return _rootHashFromConsistencyProof(oldSize, newSize, proofNodes, oldRoot, True, True)
+
+
 def validAuditProof(rootHash, treeSize, idx, proof, leafData):
     leafHash = sha256(b'\x00')
     leafHash.update(leafData)
@@ -183,3 +267,13 @@ def validAuditProof(rootHash, treeSize, idx, proof, leafData):
         proof,
         idx,
         treeSize)
+
+
+def validConsistencyProof(oldRoot, newRoot, oldSize, newSize, proofNodes):
+    if oldSize == 0: # the empty tree is consistent with any future
+        return True
+    if oldSize == newSize:
+        return oldRoot == newRoot and not proofNodes
+    computedOldRoot = _oldRootFromConsistencyProof(oldSize, newSize, proofNodes, oldRoot)
+    computedNewRoot = _newRootFromConsistencyProof(oldSize, newSize, proofNodes, oldRoot)
+    return oldRoot == computedOldRoot and newRoot == computedNewRoot

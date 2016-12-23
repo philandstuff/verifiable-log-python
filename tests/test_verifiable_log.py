@@ -13,7 +13,7 @@ from hypothesis import given
 import hypothesis.strategies as st
 from binascii import hexlify
 
-from verifiable_log.verifiable_log import VerifiableLog, VerifiableLog2, validAuditProof
+from verifiable_log.verifiable_log import VerifiableLog, VerifiableLog2, validAuditProof, validConsistencyProof
 
 
 EMPTY_HASH=b'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
@@ -165,3 +165,22 @@ def test_snapshotted_audit_proofs_are_valid_with_alternative_impl(data, leafInde
         vlog.append(b)
 
     assert validAuditProof(rootHash, snapshotSize, leafIndex, vlog.auditProof(leafIndex, snapshotSize), data[leafIndex])
+
+
+@given(st.lists(st.binary(), max_size=99), st.integers(min_value=0, max_value=99), st.integers(min_value=0, max_value=99))
+def test_consistency_proofs_are_valid_with_alternative_impl(data, snapshot1, snapshot2):
+    st.assume(snapshot1 <= snapshot2)
+    st.assume(snapshot2 <= len(data))
+    vlog = VerifiableLog2()
+    for b in data[0:snapshot1]:
+        vlog.append(b)
+
+    rootHash1 = vlog.currentRoot()
+    for b in data[snapshot1:snapshot2]:
+        vlog.append(b)
+
+    rootHash2 = vlog.currentRoot()
+    for b in data[snapshot2:]:
+        vlog.append(b)
+
+    assert validConsistencyProof(rootHash1, rootHash2, snapshot1, snapshot2, vlog.consistencyProof(snapshot1, snapshot2))
