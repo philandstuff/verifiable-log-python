@@ -69,32 +69,7 @@ class VerifiableLog2(object):
 
 
     def auditProof(self, node, size):
-        proof = []
-        if size <= 1:
-            return proof
-        last_node = size-1
-        level = 0
-
-        last_hash = self._hashes[0][last_node]
-
-        while last_node > 0:
-            # find which node, if any, to add to the tree
-            is_left_child = node%2 == 0
-            sibling = node+1 if is_left_child else node-1
-            if sibling < last_node:
-                proof.append(self._hashes[level][sibling])
-            elif sibling == last_node:
-                proof.append(last_hash)
-            # else: sibling > last_node
-            #   ie sibling doesn't exist and shouldn't be added
-
-            # now, step up the tree to the next level
-            if last_node % 2 == 1:
-                last_hash = _branch_hash(self._hashes[level][last_node-1], last_hash)
-            level += 1
-            node //= 2
-            last_node //= 2
-        return proof
+        return self._pathFromNodeToRootAtSnapshot(node, 0, size)
 
 
     def _pathFromNodeToRootAtSnapshot(self, node, level, snapshot):
